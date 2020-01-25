@@ -96,50 +96,47 @@ class DeeStorter():
         frames_count = int(probe['streams'][0]['nb_frames'])
 
         # distort every extracted frame
-        for filename in sorted(os.listdir(f'{self.frames_path}')):
+        for file in sorted(os.listdir(f'{self.frames_path}')):
             # set rescale that depends on current timeline percentage
             cur_rescale = round((cur_frame / frames_count + rescale_rate), 2) 
 
-            img = Image(filename=f'{self.frames_path}{filename}')
+            img = Image(filename=f'{self.frames_path}{file}')
             x, y = img.size[0], img.size[1]
             img.liquid_rescale(int(x // cur_rescale), int(y // cur_rescale), delta_x=1, rigidity=0)
             img.transform(f'{x}x{y}', '200%')
-            img.save(filename=f'{self.distorted_frames_path}{filename}')
+            img.save(filename=f'{self.distorted_frames_path}{file}')
             cur_frame += 1
-
-        if ctype == 'video':
-            distorted_audio = stream.audio.filter('vibrato', f=7.0, d=0.7)
+        try:
+            if ctype == 'video':
+                distorted_audio = stream.audio.filter('tremolo', f=5.0, d=0.1).filter('vibrato', f=5.0, d=0.1)
+                
+                (
+                    ffmpeg
+                    .input('{}jpg%04d.jpg'.format(self.distorted_frames_path))
+                    .filter('scale', width=origin_w, height=origin_h)
+                    .output(distorted_audio, f'{self.edited_files_path}{filename}.mp4', acodec='ac3')
+                    .run()
+                )
+            else:
+                (
+                    ffmpeg
+                    .input('{}jpg%04d.jpg'.format(self.distorted_frames_path))
+                    .filter('scale', width=origin_w, height=origin_h)
+                    .output(f'{self.edited_files_path}{filename}.mp4')
+                    .run()
+                )
+            os.remove(f'{self.filespath}{filename}')
             
-            (
-                ffmpeg
-                .input('{}jpg%04d.jpg'.format(self.distorted_frames_path))
-                .filter('scale', width=origin_w, height=origin_h)
-                .output(distorted_audio, f'{self.edited_files_path}{filename}.mp4', acodec='ac3')
-                .run()
-            )
-        else:
-            (
-                ffmpeg
-                .input('{}jpg%04d.jpg'.format(self.distorted_frames_path))
-                .filter('scale', width=origin_w, height=origin_h)
-                .output(f'{self.edited_files_path}{filename}.mp4')
-                .run()
-            )
+        except Exception:
+            pass
 
-        os.remove(f'{self.filespath}{filename}')
-        self.cleaner()
-        return filename
+        finally:
+            self.cleaner()
+            return filename
 
 
     def cleaner(self):
         for file in os.listdir(f'{self.frames_path}'):
             os.remove(f'{self.frames_path}{file}')
-        for file in os.listdir(f'{self.distorted_frames_path}{file}'):
+        for file in os.listdir(f'{self.distorted_frames_path}'):
             os.remove(f'{self.distorted_frames_path}{file}')
-        
-
-    
-
-
-d = DeeStorter('./files/', 'disasm_video/', 'distorted_imgs/', 'edited/')
-print(d.distort('13.mp4'))
