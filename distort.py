@@ -114,7 +114,7 @@ class DeeStorter():
                     ffmpeg
                     .input('{}jpg%04d.jpg'.format(self.distorted_frames_path))
                     .filter('scale', width=origin_w, height=origin_h)
-                    .output(distorted_audio, f'{self.edited_files_path}{filename}.mp4', acodec='ac3')
+                    .output(distorted_audio, f'{self.edited_files_path}{filename}.mp4', acodec='aac')
                     .run()
                 )
             else:
@@ -126,9 +126,9 @@ class DeeStorter():
                     .run()
                 )
             os.remove(f'{self.filespath}{filename}')
-            
+
         except Exception:
-            pass
+            raise Exception
 
         finally:
             self.cleaner()
